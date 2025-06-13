@@ -2,7 +2,6 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.m
 import { initArena } from './arena.js';
 import { PlayerPhysics } from './PlayerPhysics.js';
 import { PlayerModel } from './player.js';
-import { setupUI, updateHealthBar } from './ui.js';
 import { initInput } from './input.js';
 
 // This function will be called by index.html after the user clicks "Play"
@@ -13,13 +12,7 @@ export function startGame() {
     let renderer;
     let playerPhysics;
     let players = {};
-    let currentItem = 0;
     let started = false;
-
-    // Define initial health for the player
-    const health = { current: 10, max: 10 };
-    // Define hotbar items (these are also defined in textures.js and ui.js, ensure consistency)
-    const hotbarItems = ["sword", "axe", "shield"];
 
     // The main initialization logic for the game
     function init() {
@@ -35,11 +28,6 @@ export function startGame() {
 
         playerPhysics = new PlayerPhysics(scene, renderer.domElement, collidableObjects, showMessageBox, socket);
 
-        // Setup the game UI.
-        // The original 'play' button logic from setupUI is now handled by the landing page.
-        // We can directly start the game UI elements here.
-        setupUI(hotbarItems, health); // Pass hotbarItems and health to setupUI
-        document.getElementById("hud").style.display = "block"; // Or 'flex' depending on your layout
         started = true;
         socket.emit("start");
 
@@ -72,21 +60,6 @@ export function startGame() {
         };
     }
     
-    // Function to change the currently selected hotbar item
-    function changeHotbar(index) {
-        if (index >= hotbarItems.length) return; // Prevent out-of-bounds access
-        currentItem = index;
-
-        // Update the visual selection in the hotbar UI
-        document.querySelectorAll(".hotbar-slot").forEach((el, i) =>
-            el.classList.toggle("selected", i === index)
-        );
-
-        // If player model exists, update the held item visually
-        if (playerPhysics && playerPhysics.playerModel) {
-            playerPhysics.playerModel.updateHeldItem(currentItem);
-        }
-    }
 
     let lastTime = 0;
     // Main animation loop
@@ -127,7 +100,7 @@ export function startGame() {
     });
 
     // Handle new player joining
-    socket.on("newPlayer", ({ id, position, skinUrl }) => {
+    socket.on("newPlayer", ({ id, position, }) => {
         if (players[id] || id === socket.id) return; // Don't add self or existing player
 
         const newPlayerModel = new PlayerModel(scene);
@@ -150,12 +123,5 @@ export function startGame() {
         }
     });
 
-    // Handle 'gotHit' event from the server to update player health
-    socket.on("gotHit", (amount) => {
-        health.current = Math.max(0, health.current - amount); // Decrease health, ensure it doesn't go below 0
-        updateHealthBar(health); // Update the visual health bar
-    });
-    
-    // Kick off the game initialization process
     init();
 }

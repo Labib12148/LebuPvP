@@ -1,150 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LebuPvP - Dominate the Arena</title>
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts - Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LebuPvP - Enter the Arena</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 </head>
-<body class="bg-gray-900 text-white overflow-x-hidden">
+<body>
+  <div class="bg-grid"></div>
 
-    <!-- Landing Page Elements -->
-    <div id="landing-container">
-        <!-- Background 3D Canvas -->
-        <canvas id="backgroundCanvas" class="fixed top-0 left-0 w-full h-full z-0 opacity-25"></canvas>
+  <div id="landing-page" class="landing">
+    <h1 class="game-title">LEBU<span>PVP</span></h1>
+    <button id="enter-arena-button" class="glow-button">ENTER ARENA</button>
+  </div>
 
-        <!-- Main Content Wrapper -->
-        <div id="landing-page" class="relative z-10">
-            <!-- Hero Section -->
-            <main class="min-h-screen flex flex-col items-center justify-center text-center p-4">
-                <h1 class="text-6xl md:text-8xl lg:text-9xl font-extrabold drop-shadow-lg animate-shimmer">
-                    LebuPvP
-                </h1>
-                <p class="mt-4 text-xl md:text-2xl text-gray-300 max-w-2xl animate-fadeInUp" style="animation-delay: 200ms;">
-                    Unleash Your Inner Gladiator. Dominate the Arena in Fast-Paced PvP Combat.
-                </p>
-                <button id="playBtn" class="mt-10 px-10 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full shadow-lg shadow-indigo-500/30 transform transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-indigo-300 animate-float">
-                    <i class="fas fa-play mr-3"></i> Enter the Arena
-                </button>
-            </main>
-        </div>
+  <div id="game-container" class="hidden">
+    <!-- Canvas injected by main.js -->
+  </div>
+
+  <div id="messageBox" class="message-box hidden">
+    <div class="message-content">
+      <p id="messageText"></p>
+      <button id="messageButton">OK</button>
     </div>
+  </div>
 
-    <!-- Game-Specific UI Elements (Initially Hidden) -->
-    <div id="game-container" class="hidden">
-        <div id="home" class="flex flex-col items-center justify-center min-h-screen">
-             <!-- This can be a pre-game lobby or character select screen -->
-        </div>
+    <div id="esc-menu" class="esc-menu hidden">
+    <h2>Game Menu</h2>
+    <button id="music-toggle-btn" style="font-size:14px; padding:8px 12px; margin: 10px 0;">Mute Music</button>
+    <br />
+    <label for="volume-range">Volume:</label>
+    <input type="range" id="volume-range" min="0" max="1" step="0.01" value="0.5" style="width: 150px;"/>
+    <br /><br />
+    <button id="close-menu-btn" style="font-size:14px; padding:8px 12px;">Resume Game</button>
+  </div>
 
-        <div id="hud" class="hidden">
-            <div id="hotbar" class="fixed bottom-4 left-1/2 -translate-x-1/2 flex gap-2 p-2 bg-black/40 rounded-lg"></div>
-            <div id="health" class="fixed top-4 left-4 flex items-center gap-2 text-white bg-black/40 p-2 rounded-lg"></div>
-        </div>
-        
-        <div id="crosshair" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 border-2 border-white rounded-full opacity-50"></div>
-        
-        <div id="skinInput" class="hidden">
-            <!-- Your skin input elements go here -->
-        </div>
+  <script type="module">
+    import { startGame } from './js/main.js';
 
-        <!-- Message Box for in-game notifications -->
-        <div id="messageBox" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl z-50 text-center">
-            <p id="messageText" class="text-xl mb-6"></p>
-            <button id="messageButton" class="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">OK</button>
-        </div>
-    </div>
-    
-    <!-- Three.js Library -->
-    <script type="module">
-        import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js";
-
-        let camera, scene, renderer, stars;
-        const mouse = new THREE.Vector2();
-
-        // Function to initialize the landing page background
-        function initLandingBackground() {
-            const canvas = document.getElementById('backgroundCanvas');
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.001);
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-            camera.position.z = 1;
-            camera.rotation.x = Math.PI / 2;
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-
-            const starGeometry = new THREE.BufferGeometry();
-            const starVertices = [];
-            for (let i = 0; i < 6000; i++) {
-                starVertices.push((Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000);
-            }
-            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-            
-            const starMaterial = new THREE.PointsMaterial({
-                color: 0xaaaaaa, size: 0.7, transparent: true, blending: THREE.AdditiveBlending
-            });
-            stars = new THREE.Points(starGeometry, starMaterial);
-            scene.add(stars);
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-
-            document.addEventListener('mousemove', (event) => {
-                mouse.x = (event.clientX - window.innerWidth / 2) * 0.0001;
-                mouse.y = (event.clientY - window.innerHeight / 2) * 0.0001;
-            });
-        }
-
-        // Animation loop for the landing page background
-        function animateLanding() {
-            requestAnimationFrame(animateLanding);
-            stars.rotation.z -= 0.0002;
-            camera.position.x += (mouse.x - camera.position.x) * 0.05;
-            camera.position.y += (-mouse.y - camera.position.y) * 0.05;
-            renderer.render(scene, camera);
-        }
-
-        // --- Event Listener to Start the Game ---
-        document.getElementById('playBtn').addEventListener('click', async () => {
-            const landingContainer = document.getElementById('landing-container');
-            landingContainer.style.transition = 'opacity 0.5s ease-out';
-            landingContainer.style.opacity = '0';
-            
-            setTimeout(async () => {
-                landingContainer.style.display = 'none';
-                document.getElementById('game-container').style.display = 'block';
-
-                // Dynamically import and start the main game script
-                console.log("Loading game assets...");
-                const { startGame } = await import('./js/main.js');
-                startGame(); // This function will initialize your game
-                console.log("Game start initiated!");
-                
-            }, 500);
-        });
-        
-        // Initialize and animate the landing page background
-        initLandingBackground();
-        animateLanding();
-    </script>
-    
-    <!-- Socket.IO Client -->
-    <script src="/socket.io/socket.io.js"></script>
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("enter-arena-button").addEventListener("click", () => {
+        document.getElementById("landing-page").classList.add("hidden");
+        document.getElementById("game-container").classList.remove("hidden");
+        startGame();
+      });
+    });
+  </script>
 </body>
 </html>

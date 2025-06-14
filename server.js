@@ -13,85 +13,61 @@ app.use(express.static(path.join(__dirname)));
 const players = {};
 
 io.on("connection", (socket) => {
-  console.log(`Player connected: ${socket.id}`);
+    console.log(`Player connected: ${socket.id}`);
 
-  socket.on("start", () => {
-  players[socket.id] = {
-    position: {
-      x: Math.random() * 50,
-      y: 4,
-      z: Math.random() * 50,
-    },
-    health: 10,
-    skinUrl: null,
-  };
+    socket.on("start", () => {
+        players[socket.id] = {
+            position: {
+                x: Math.random() * 50,
+                y: 4,
+                z: Math.random() * 50,
+            },
+            rotationY: 0, // <-- ADDED: Initialize rotationY
+            health: 10,
+            skinUrl: null,
+            isWalking: false, // <-- ADDED: Initialize isWalking
+        };
 
-  socket.emit("currentPlayers", players);
+        // Send current players data to the newly connected player
+        socket.emit("currentPlayers", players);
 
-  socket.broadcast.emit("newPlayer", {
-    id: socket.id,
-    position: players[socket.id].position,
-    skinUrl: players[socket.id].skinUrl,
-  });
-});
-
-  socket.on("move", ({ position }) => {
-    if (!players[socket.id]) return;
-
-    // Update player's position on server
-    players[socket.id].position.x = position.x;
-    players[socket.id].position.y = position.y;
-    players[socket.id].position.z = position.z;
-
-    // Broadcast updated position to other clients
-    socket.broadcast.emit("playerMoved", {
-      id: socket.id,
-      position: players[socket.id].position,
+        // Broadcast new player info to existing players
+        socket.broadcast.emit("newPlayer", {
+            id: socket.id,
+            position: players[socket.id].position,
+            rotationY: players[socket.id].rotationY, // <-- ADDED: Send rotationY
+            skinUrl: players[socket.id].skinUrl,
+            isWalking: players[socket.id].isWalking, // <-- ADDED: Send isWalking
+        });
     });
-  });
 
-  socket.on("attack", ({ damage }) => {
-    const attacker = players[socket.id];
-    if (!attacker) return;
+    socket.on("move", ({ position, rotationY, isWalking }) => { // <-- MODIFIED: Receive rotationY and isWalking
+        if (!players[socket.id]) return;
 
-    for (const id in players) {
-      if (id === socket.id) continue;
+        // Update player's position, rotationY, and isWalking state on server
+        players[socket.id].position.x = position.x;
+        players[socket.id].position.y = position.y;
+        players[socket.id].position.z = position.z;
+        players[socket.id].rotationY = rotationY; // <-- ADDED: Update rotationY
+        players[socket.id].isWalking = isWalking; // <-- ADDED: Update isWalking
 
-      const target = players[id];
-      const dx = attacker.position.x - target.position.x;
-      const dz = attacker.position.z - target.position.z;
-      const distance = Math.sqrt(dx * dx + dz * dz);
+        // Broadcast updated position, rotationY, and isWalking to other clients
+        socket.broadcast.emit("playerMoved", {
+            id: socket.id,
+            position: players[socket.id].position,
+            rotationY: players[socket.id].rotationY, // <-- ADDED: Send rotationY
+            isWalking: players[socket.id].isWalking, // <-- ADDED: Send isWalking
+        });
+    });
 
-      if (distance < 2) {
-        target.health -= damage;
-        if (target.health < 0) target.health = 0;
-
-        io.to(id).emit("gotHit", damage);
-
-        if (target.health <= 0) {
-          target.health = 10;
-          target.position = {
-            x: Math.random() * 50,
-            y: 4,
-            z: Math.random() * 50,
-          };
-
-          io.emit("playerMoved", { id, position: target.position });
-          io.to(id).emit("gotHit", target.health);
-}
-
-      }
-    }
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`Player disconnected: ${socket.id}`);
-    delete players[socket.id];
-    io.emit("playerDisconnected", socket.id);
-  });
+    socket.on("disconnect", () => {
+        console.log(`Player disconnected: ${socket.id}`);
+        delete players[socket.id];
+        io.emit("playerDisconnected", socket.id);
+    });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });

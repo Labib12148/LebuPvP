@@ -2,11 +2,16 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.m
 
 const BLOCK_SIZE = 1;
 const FLOOR_Y = 0;
+const FLOOR_RADIUS = 30;
 
 const loader = new THREE.TextureLoader();
+const floorTextures = [];
+for (let i = 1; i <= 5; i++) {
+    floorTextures.push(loader.load(`assets/floor${i}.png`));
+}
+
 const textures = {
-    block: loader.load("assets/block.png"),
-    grass: loader.load("assets/grass.png")
+    block: loader.load("assets/block.png")
 };
 
 export function initArena() {
@@ -20,12 +25,15 @@ export function initArena() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(50, 100, 50);
-    scene.add(dirLight);
-    scene.add(new THREE.AmbientLight(0x606060));
+    // Lighting
+    const hemiLight = new THREE.HemisphereLight(0xaaaaaa, 0x111111, 1);
+    scene.add(hemiLight);
 
-    const grassMaterial = new THREE.MeshLambertMaterial({ map: textures.grass });
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    dirLight.position.set(100, 100, 50);
+    dirLight.castShadow = false;
+    scene.add(dirLight);
+
     const blockMaterial = new THREE.MeshLambertMaterial({ map: textures.block });
 
     function addBlock(x, y, z, material, isCollidable = false) {
@@ -40,40 +48,124 @@ export function initArena() {
             collidableObjects.push(mesh);
         }
         scene.add(mesh);
+        return mesh;
     }
 
-    const floorRadius = 50;
-    for (let x = -floorRadius; x <= floorRadius; x++) {
-        for (let z = -floorRadius; z <= floorRadius; z++) {
-            if (x * x + z * z <= floorRadius * floorRadius) {
-                addBlock(x, FLOOR_Y, z, grassMaterial, false);
+    // 🕺 Organized Disco Floor — Tiled pattern with cycling animation
+    const floorBlocks = [];
+    const patternSize = 5; // size of repeating pattern (5 textures)
+
+    for (let x = -FLOOR_RADIUS; x <= FLOOR_RADIUS; x++) {
+        for (let z = -FLOOR_RADIUS; z <= FLOOR_RADIUS; z++) {
+            if (x * x + z * z <= FLOOR_RADIUS * FLOOR_RADIUS) {
+                // Select texture index based on position for a repeating pattern
+                const patternIndex = ((x + FLOOR_RADIUS) % patternSize + (z + FLOOR_RADIUS) % patternSize) % floorTextures.length;
+
+                const material = new THREE.MeshBasicMaterial({
+                    map: floorTextures[patternIndex],
+                    transparent: true,
+                    opacity: 1
+                });
+
+                const block = addBlock(x, FLOOR_Y, z, material, false);
+                floorBlocks.push({
+                    mesh: block,
+                    x: x + FLOOR_RADIUS,
+                    z: z + FLOOR_RADIUS,
+                    baseIndex: patternIndex
+                });
             }
         }
     }
 
-    const wallHeight = 5;
-    // Increased wallThickness to make the barrier more robust and prevent glitches
-    const wallThickness = 2; // Changed from 1 to 2
-    const wallInnerRadius = floorRadius;
-    const wallOuterRadius = floorRadius + wallThickness;
+    // 💡 Disco Animation - cycling textures in a wave pattern
+    let animationStep = 0;
+    setInterval(() => {
+        animationStep++;
+        for (const blockData of floorBlocks) {
+            // Cycle texture index based on position and animation step for wave effect
+            const newIndex = (blockData.baseIndex + animationStep + blockData.x + blockData.z) % floorTextures.length;
+            blockData.mesh.material.map = floorTextures[newIndex];
+            blockData.mesh.material.needsUpdate = true;
+        }
+    }, 500); // change every 0.5 seconds for a lively effect
 
-    // Iterate over a square region that encompasses the outer wall
+    // 🧱 Walls
+    const wallHeight = 5;
+    const wallThickness = 2;
+    const wallInnerRadius = FLOOR_RADIUS;
+    const wallOuterRadius = FLOOR_RADIUS + wallThickness;
+
     for (let x = -(wallOuterRadius + 1); x <= (wallOuterRadius + 1); x++) {
         for (let z = -(wallOuterRadius + 1); z <= (wallOuterRadius + 1); z++) {
             const dist = Math.sqrt(x * x + z * z);
-
-            // Check if the current (x, z) coordinate falls within the annulus of the wall
-            // Using <= for wallOuterRadius to ensure full coverage up to and including the outer edge
-            if (dist >= wallInnerRadius && dist <= wallOuterRadius) { // Changed < to <= for wallOuterRadius
+            if (dist >= wallInnerRadius && dist <= wallOuterRadius) {
                 for (let h = 0; h < wallHeight; h++) {
-                    // Add blocks vertically to form the wall
                     addBlock(x, FLOOR_Y + h + 1, z, blockMaterial, true);
                 }
             }
         }
     }
 
-    scene.background = new THREE.Color(0x87CEEB);
+    // 🌌 Retro Sky Shader
+    const skyGeo = new THREE.SphereGeometry(500, 32, 15);
+    const skyMat = new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        uniforms: {
+            topColor: { value: new THREE.Color(0x001f3f) },
+            bottomColor: { value: new THREE.Color(0x39CCCC) },
+            offset: { value: 33 },
+            exponent: { value: 0.6 }
+        },
+        vertexShader: `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            uniform float offset;
+            uniform float exponent;
+            varying vec3 vWorldPosition;
+            void main() {
+                float h = normalize(vWorldPosition + offset).y;
+                gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+            }
+        `,
+        depthWrite: false
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(sky);
+
+    // ✨ Stars
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 500;
+    const starPositions = [];
+
+    for (let i = 0; i < starCount; i++) {
+        const radius = 450;
+        const theta = Math.random() * 2 * Math.PI;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.sin(phi) * Math.sin(theta);
+        const z = radius * Math.cos(phi);
+        starPositions.push(x, y, z);
+    }
+
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+
+    const starMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 1.5,
+        sizeAttenuation: false
+    });
+
+    const starField = new THREE.Points(starGeometry, starMaterial);
+    scene.add(starField);
 
     return { scene, camera, renderer, collidableObjects };
 }

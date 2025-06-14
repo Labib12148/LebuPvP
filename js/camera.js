@@ -12,6 +12,9 @@ export class CameraController {
         this.perspectives = ['firstPerson', 'thirdPersonBack', 'thirdPersonFront'];
         this.currentPerspectiveIndex = 0;
 
+        this.rotation = { x: 0, y: 0 };
+        this.mouseSensitivity = 0.002;
+
         this.crosshair = this.initCrosshair();
         this.addEventListeners();
         this.applyPerspective();
@@ -37,19 +40,36 @@ export class CameraController {
     }
 
     addEventListeners() {
+        // Pointer lock for 1st person
         this.rendererDomElement.addEventListener('click', () => {
             if (!this.isPointerLocked && this.getPerspective() === 'firstPerson') {
                 this.rendererDomElement.requestPointerLock();
             }
         });
 
+        // Pointer lock state update
         document.addEventListener('pointerlockchange', () => {
             this.isPointerLocked = document.pointerLockElement === this.rendererDomElement;
             this.crosshair.style.display = (this.isPointerLocked && this.getPerspective() === 'firstPerson') ? 'block' : 'none';
         });
 
+        // Toggle perspective
         document.addEventListener('keydown', (e) => {
             if (e.code === 'KeyX') this.togglePerspective();
+        });
+
+        // Mouse move for all perspectives
+        window.addEventListener('mousemove', (e) => {
+            if (this.getPerspective() === 'firstPerson' && this.isPointerLocked) {
+                this.rotation.y -= e.movementX * this.mouseSensitivity;
+                this.rotation.x -= e.movementY * this.mouseSensitivity;
+                this.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.rotation.x));
+            }
+
+            // Free mouse movement in 3rd person without pointer lock
+            else if (this.getPerspective() !== 'firstPerson') {
+                this.rotation.y -= e.movementX * this.mouseSensitivity;
+            }
         });
 
         window.addEventListener('resize', () => {
@@ -75,12 +95,12 @@ export class CameraController {
         } else {
             document.exitPointerLock();
             this.playerModel.playerGroup.visible = true;
+            this.crosshair.style.display = 'none';
         }
     }
 
     update(playerPosition, playerRotation, playerHeight, playerRadius) {
-        const eyeOffset = playerHeight * 0.80; // eye-level
-
+        const eyeOffset = playerHeight * 0.80;
         const lookTarget = new THREE.Vector3(
             playerPosition.x,
             playerPosition.y + eyeOffset,
@@ -93,12 +113,12 @@ export class CameraController {
                 playerPosition.y + eyeOffset,
                 playerPosition.z
             );
-            this.camera.rotation.x = playerRotation.x;
-            this.camera.rotation.y = playerRotation.y;
+            this.camera.rotation.x = this.rotation.x;
+            this.camera.rotation.y = this.rotation.y;
         } else {
             const behind = this.getPerspective() === 'thirdPersonBack';
             const dist = 3;
-            const angle = playerRotation.y;
+            const angle = this.rotation.y;
             const offsetX = Math.sin(angle) * dist * (behind ? -1 : 1);
             const offsetZ = Math.cos(angle) * dist * (behind ? -1 : 1);
 
@@ -108,7 +128,7 @@ export class CameraController {
                 playerPosition.z + offsetZ
             );
 
-            this.camera.position.lerp(cameraPos, 0.2); // smooth camera
+            this.camera.position.lerp(cameraPos, 0.2);
             this.camera.lookAt(lookTarget);
         }
     }

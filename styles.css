@@ -230,3 +230,50 @@ body {
   transition: opacity 0.3s ease !important;
   display: none !important;
 }
+
+/* Smooth futuristic animated title */
+.animated-title {
+  position: relative;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 4rem;
+  font-weight: 700;
+  color: #0ff;
+  text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+  animation: glowPulse 3s infinite ease-in-out;
+  background: linear-gradient(90deg, #0ff, #f0f, #0ff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.animated-title span {
+  color: #f0f;
+  text-shadow: 0 0 12px #f0f, 0 0 24px #f0f;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    text-shadow: 0 0 8px #0ff, 0 0 18px #0ff;
+    background-position: 0% center;
+  }
+  50% {
+    text-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
+    background-position: 100% center;
+  }
+}
+
+/* Subtitle stays same */
+.subtitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  color: #aaa;
+  text-shadow: 0 0 6px #0ff;
+  margin-top: -30px;
+  margin-bottom: 60px;
+  animation: fadeInSubtitle 2.5s ease-out;
+}
+
+@keyframes fadeInSubtitle {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -5,6 +5,7 @@ import { initArena } from './arena.js';
 import { PlayerPhysics } from './PlayerPhysics.js';
 import { PlayerModel } from './player.js';
 import { MusicPlayer } from './music.js';
+import { HealthSystem } from './healthSystem.js';
 import { setupInput, toggleEscMenu, setupEscMenuEvents } from './escMenu.js';
 
 // Create music player but do NOT autoplay yet
@@ -19,6 +20,7 @@ export function startGame() {
     let renderer;
     let playerPhysics;
     let players = {}; // Stores other players' models
+    let healthSystem;
     let started = false;
 
     function init() {
@@ -32,6 +34,10 @@ export function startGame() {
         renderer.domElement.id = 'gameCanvas';
 
         playerPhysics = new PlayerPhysics(scene, renderer.domElement, collidableObjects, showMessageBox, socket);
+
+        // Init HUD health system
+        healthSystem = new HealthSystem(10);
+        healthSystem.setHealth(10);
 
         started = true;
         socket.emit("start");
@@ -48,6 +54,13 @@ export function startGame() {
         });
 
         animate(0);
+
+        // Attack action on left click
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left mouse button
+                socket.emit('attack');
+            }
+        });
     }
 
     // Show custom message box
@@ -135,6 +148,27 @@ export function startGame() {
         if (players[id]) {
             scene.remove(players[id].playerGroup);
             delete players[id];
+        }
+    });
+
+    // Receive health updates for this player
+    socket.on('updateHealth', ({ id, health }) => {
+        if (id === socket.id && healthSystem) {
+            healthSystem.setHealth(health);
+        }
+    });
+
+    socket.on('playerRespawn', ({ id, position, health }) => {
+        if (id === socket.id) {
+            // Reset health HUD
+            if (healthSystem) healthSystem.setHealth(health);
+            // Teleport player to new position
+            if (playerPhysics) {
+                playerPhysics.position.set(position.x, position.y, position.z);
+            }
+        } else if (players[id]) {
+            // Other player's model resets position
+            players[id].playerGroup.position.set(position.x, position.y, position.z);
         }
     });
 

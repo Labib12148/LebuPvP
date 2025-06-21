@@ -43,6 +43,7 @@ export class PlayerModel {
         const HEAD_W = 8, HEAD_H = 8, HEAD_D = 8;
         const BODY_W = 8, BODY_H = 12, BODY_D = 4;
         const ARM_W = 3, ARM_H_PURPLE = 10, ARM_D = 3;
+        const SWORD_W = 1, SWORD_H = 12, SWORD_D = 0.5;
         const HAND_W = 3, HAND_H = 2, HAND_D = 3;
         const LEG_W = 4, LEG_H_PURPLE = 10, LEG_D = 4;
         const FOOT_W = 4, FOOT_H = 2, FOOT_D = 4;
@@ -69,6 +70,14 @@ export class PlayerModel {
 
         // Right Hand (child of rightArm)
         this.rightHand = createBoxPart(HAND_W, HAND_H, HAND_D, 0, -(ARM_H_PURPLE / 2 + HAND_H / 2), 0, 'rightHand', blackColor, this.rightArm);
+
+        // Sword (child of rightHand)
+        const swordGeo = new THREE.BoxGeometry(SWORD_W * GLOBAL_SCALE, SWORD_H * GLOBAL_SCALE, SWORD_D * GLOBAL_SCALE);
+        const swordMat = new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('assets/sword.png'), transparent: true });
+        this.sword = new THREE.Mesh(swordGeo, swordMat);
+        // Position sword so that the handle is in the hand
+        this.sword.position.set(0, -(HAND_H / 2 + SWORD_H / 2) * GLOBAL_SCALE, 0);
+        this.rightHand.add(this.sword);
 
         // Left Arm
         this.leftArm = createBoxPart(ARM_W, ARM_H_PURPLE, ARM_D, ARM_X_OFFSET, ARM_PIVOT_Y - (ARM_H_PURPLE / 2), 0, 'leftArm', purpleColor);
@@ -157,5 +166,33 @@ export class PlayerModel {
             this.rightLeg.rotation.x = 0;
             this.leftLeg.rotation.x = 0;
         }
+    }
+
+    swingWeapon() {
+        if (this.isSwinging) return; // prevent overlapping swings
+        this.isSwinging = true;
+        const swingDuration = 300; // ms
+        const initialRot = this.rightArm.rotation.x;
+        const swingDown = -Math.PI / 2;
+
+        // Simple swing animation using Tween-like approach
+        const startTime = performance.now();
+        const animateSwing = (time) => {
+            const elapsed = time - startTime;
+            const t = Math.min(elapsed / swingDuration, 1);
+            // Ease out quadratic
+            const ease = - (t) * (t - 2);
+
+            this.rightArm.rotation.x = initialRot + swingDown * ease;
+
+            if (t < 1) {
+                requestAnimationFrame(animateSwing);
+            } else {
+                // Return to original rotation
+                this.rightArm.rotation.x = initialRot;
+                this.isSwinging = false;
+            }
+        };
+        requestAnimationFrame(animateSwing);
     }
 }

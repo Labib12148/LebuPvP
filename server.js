@@ -12,6 +12,18 @@ app.use(express.static(path.join(__dirname)));
 
 const players = {};
 
+// Helper to build public scoreboard data
+function buildScoreboard() {
+    const data = {};
+    for (const id in players) {
+        data[id] = {
+            kills: players[id].kills || 0,
+            deaths: players[id].deaths || 0,
+        };
+    }
+    return data;
+}
+
 io.on("connection", (socket) => {
     console.log(`Player connected: ${socket.id}`);
 
@@ -26,6 +38,8 @@ io.on("connection", (socket) => {
             health: 10,
             skinUrl: null,
             isWalking: false, // <-- ADDED: Initialize isWalking
+            kills: 0,
+            deaths: 0,
         };
 
         // Send current players data to the newly connected player
@@ -39,6 +53,9 @@ io.on("connection", (socket) => {
             skinUrl: players[socket.id].skinUrl,
             isWalking: players[socket.id].isWalking, // <-- ADDED: Send isWalking
         });
+
+        // Send initial scoreboard
+        io.emit("scoreboardUpdate", buildScoreboard());
     });
 
     socket.on("move", ({ position, rotationY, isWalking }) => { // <-- MODIFIED: Receive rotationY and isWalking
@@ -91,18 +108,32 @@ io.on("connection", (socket) => {
                         z: Math.random() * 50,
                     };
                     target.health = 10;
+
+                    // Update stats
+                    attacker.kills = (attacker.kills || 0) + 1;
+                    target.deaths = (target.deaths || 0) + 1;
+
                     io.to(id).emit("playerRespawn", { id, position: target.position, health: target.health });
                     // Inform others to reposition the respawned player's model
                     socket.broadcast.emit("playerRespawn", { id, position: target.position, health: target.health });
                 }
             }
         }
+
+        // Broadcast attack animation event
+        socket.broadcast.emit("playerAttack", { id: socket.id });
+
+        // Broadcast updated scoreboard
+        io.emit("scoreboardUpdate", buildScoreboard());
     });
 
     socket.on("disconnect", () => {
         console.log(`Player disconnected: ${socket.id}`);
         delete players[socket.id];
         io.emit("playerDisconnected", socket.id);
+
+        // Update scoreboard
+        io.emit("scoreboardUpdate", buildScoreboard());
     });
 });
 

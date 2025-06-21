@@ -6,11 +6,13 @@ import { PlayerPhysics } from './PlayerPhysics.js';
 import { PlayerModel } from './player.js';
 import { MusicPlayer } from './music.js';
 import { HealthSystem } from './healthSystem.js';
+import { Scoreboard } from './scoreboard.js';
 import { setupInput, toggleEscMenu, setupEscMenuEvents } from './escMenu.js';
 
 // Create music player but do NOT autoplay yet
 export const musicPlayer = new MusicPlayer('assets/sounds/Pigstep1hr.mp3');
 
+const REMOTE_SMOOTH_FACTOR = 0.15; // 0-1 lerp weight each frame
 
 // Main game start function
 export function startGame() {
@@ -21,6 +23,7 @@ export function startGame() {
     let playerPhysics;
     let players = {}; // Stores other players' models
     let healthSystem;
+    let scoreboard;
     let started = false;
 
     function init() {
@@ -38,6 +41,9 @@ export function startGame() {
         // Init HUD health system
         healthSystem = new HealthSystem(10);
         healthSystem.setHealth(10);
+
+        // Init scoreboard UI
+        scoreboard = new Scoreboard();
 
         started = true;
         socket.emit("start");
@@ -59,6 +65,8 @@ export function startGame() {
         renderer.domElement.addEventListener('mousedown', (e) => {
             if (e.button === 0) { // Left mouse button
                 socket.emit('attack');
+                // Play local swing animation immediately for responsiveness
+                playerPhysics.playerModel.swingWeapon();
             }
         });
     }
@@ -87,6 +95,16 @@ export function startGame() {
         lastTime = currentTime;
 
         if (playerPhysics) playerPhysics.update(deltaTime);
+
+        // Smoothly interpolate remote players
+        for (const id in players) {
+            if (id === socket.id) continue;
+            const rp = players[id];
+            if (rp.targetPosition) {
+                rp.playerGroup.position.lerp(rp.targetPosition, REMOTE_SMOOTH_FACTOR);
+            }
+        }
+
         if (renderer && scene && playerPhysics.getCamera()) {
             renderer.render(scene, playerPhysics.getCamera());
         }
@@ -138,7 +156,8 @@ export function startGame() {
 
     socket.on("playerMoved", ({ id, position, rotationY, isWalking }) => {
         if (players[id] && id !== socket.id) {
-            players[id].playerGroup.position.set(position.x, position.y, position.z);
+            // Store target position for smoothing
+            players[id].targetPosition = new THREE.Vector3(position.x, position.y, position.z);
             players[id].playerGroup.rotation.y = rotationY;
             players[id].update(new THREE.Vector3(position.x, position.y, position.z), isWalking);
         }
@@ -170,6 +189,21 @@ export function startGame() {
             // Other player's model resets position
             players[id].playerGroup.position.set(position.x, position.y, position.z);
         }
+    });
+
+    // Attack broadcast to animate weapon swings
+    socket.on('playerAttack', ({ id }) => {
+        if (id === socket.id) {
+            // Already animating locally (handled on click)
+            return;
+        }
+        if (players[id]) {
+            players[id].swingWeapon();
+        }
+    });
+
+    socket.on('scoreboardUpdate', (data) => {
+        if (scoreboard) scoreboard.update(data);
     });
 
     init();

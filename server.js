@@ -19,7 +19,7 @@ io.on("connection", (socket) => {
         players[socket.id] = {
             position: {
                 x: Math.random() * 50,
-                y: 4,
+                y: 0,
                 z: Math.random() * 50,
             },
             rotationY: 0, // <-- ADDED: Initialize rotationY

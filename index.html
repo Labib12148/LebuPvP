@@ -15,38 +15,65 @@
 <div id="landing-page" class="landing">
   <h1 class="game-title animated-title">Lab<span>X</span></h1>
   <p class="subtitle">Enter the simulation where reality ends and combat begins.</p>
+  <div class="player-name-entry">
+    <label for="player-name-input"></label>
+    <input id="player-name-input" maxlength="16" placeholder="Enter your name" autocomplete="off" />
+  </div>
   <button id="enter-arena-button" class="glow-button">ENTER ARENA</button>
+  <p id="name-warning" style="color:#f0f; display:none; margin-top:10px;">Please enter your name!</p>
 </div>
 
-  <div id="game-container" class="hidden">
-    <!-- Canvas injected by main.js -->
-  </div>
-
-  <div id="messageBox" class="message-box hidden">
-    <div class="message-content">
-      <p id="messageText"></p>
-      <button id="messageButton">OK</button>
+<div id="game-container" class="hidden">
+  <!-- Canvas injected by main.js -->
+  <div id="ui-overlay" class="hidden">
+    <div id="health-bar-container">
+      <div id="health-bar-bg">
+        <div id="health-bar"></div>
+        <!-- Health text will be injected by JS as #health-bar-text -->
+      </div>
+    </div>
+    <div id="hotbar-container">
+      <div id="hotbar"></div>
     </div>
   </div>
+</div>
 
-    <div id="esc-menu" class="esc-menu hidden">
-    <h2>Game Menu</h2>
-    <button id="music-toggle-btn" style="font-size:14px; padding:8px 12px; margin: 10px 0;">Mute Music</button>
-    <br />
-    <label for="volume-range">Volume:</label>
-    <input type="range" id="volume-range" min="0" max="1" step="0.01" value="0.5" style="width: 150px;"/>
-    <br /><br />
-    <button id="close-menu-btn" style="font-size:14px; padding:8px 12px;">Resume Game</button>
-  </div>
+<div id="esc-menu" class="esc-menu hidden">
+  <h2>Game Menu</h2>
+  <button id="music-toggle-btn">Mute Music</button>
+  <br />
+  <label for="volume-range">Volume:</label>
+  <input type="range" id="volume-range" min="0" max="1" step="0.01" value="0.5" style="width: 150px;"/>
+  <br /><br />
+  <button id="close-menu-btn">Resume Game</button>
+</div>
 
   <script type="module">
     import { startGame } from './js/main.js';
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("enter-arena-button").addEventListener("click", () => {
+      const enterBtn = document.getElementById("enter-arena-button");
+      const nameInput = document.getElementById("player-name-input");
+      const warning = document.getElementById("name-warning");
+      // Load name from localStorage if available
+      const savedName = localStorage.getItem('playerName');
+      if (savedName) nameInput.value = savedName;
+      function tryStart() {
+        const name = nameInput.value.trim();
+        if (!name) {
+          warning.style.display = "block";
+          return;
+        }
+        warning.style.display = "none";
+        localStorage.setItem('playerName', name);
         document.getElementById("landing-page").classList.add("hidden");
         document.getElementById("game-container").classList.remove("hidden");
-        startGame();
+        document.getElementById("ui-overlay").classList.remove("hidden");
+        startGame(name);
+      }
+      enterBtn.addEventListener("click", tryStart);
+      nameInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") tryStart();
       });
     });
   </script>

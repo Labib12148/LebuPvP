@@ -69,6 +69,9 @@ export class PlayerModel {
 
         // Right Hand (child of rightArm)
         this.rightHand = createBoxPart(HAND_W, HAND_H, HAND_D, 0, -(ARM_H_PURPLE / 2 + HAND_H / 2), 0, 'rightHand', blackColor, this.rightArm);
+        // Attach weapon group to right hand
+        this.weaponGroup = new THREE.Group();
+        this.rightHand.add(this.weaponGroup);
 
         // Left Arm
         this.leftArm = createBoxPart(ARM_W, ARM_H_PURPLE, ARM_D, ARM_X_OFFSET, ARM_PIVOT_Y - (ARM_H_PURPLE / 2), 0, 'leftArm', purpleColor);
@@ -156,6 +159,44 @@ export class PlayerModel {
             this.leftArm.rotation.x = baseArmRotation;
             this.rightLeg.rotation.x = 0;
             this.leftLeg.rotation.x = 0;
+        }
+    }
+
+    setWeaponModel(weaponType) {
+        // Remove previous weapon
+        while (this.weaponGroup.children.length > 0) {
+            this.weaponGroup.remove(this.weaponGroup.children[0]);
+        }
+        // Add new weapon
+        if (weaponType === 'Sword') {
+            // Neon sword: blade (cyan) + hilt (magenta)
+            const blade = new THREE.Mesh(
+                new THREE.BoxGeometry(0.12, 0.8, 0.12),
+                new THREE.MeshBasicMaterial({ color: 0x00ffff }) // Removed emissive
+            );
+            blade.position.y = 0.4;
+            const hilt = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.09, 0.09, 0.18, 12),
+                new THREE.MeshBasicMaterial({ color: 0xff00ff }) // Removed emissive
+            );
+            hilt.position.y = -0.35;
+            this.weaponGroup.add(blade);
+            this.weaponGroup.add(hilt);
+        } else if (weaponType === 'Gun') {
+            // Neon gun: body (cyan) + barrel (magenta)
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(0.25, 0.15, 0.15),
+                new THREE.MeshBasicMaterial({ color: 0x00ffff }) // Removed emissive
+            );
+            body.position.y = 0.1;
+            const barrel = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.04, 0.04, 0.3, 12),
+                new THREE.MeshBasicMaterial({ color: 0xff00ff }) // Removed emissive
+            );
+            barrel.position.y = 0.25;
+            barrel.rotation.z = Math.PI / 2;
+            this.weaponGroup.add(body);
+            this.weaponGroup.add(barrel);
         }
     }
 }

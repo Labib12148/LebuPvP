@@ -1,33 +1,23 @@
 export function setupInput(toggleEscMenuCallback) {
-    let escMenuOpen = false;
-
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            escMenuOpen = !escMenuOpen;
-            toggleEscMenuCallback(escMenuOpen);
+            toggleEscMenuCallback();
         }
     });
 }
 
-let escMenuOpen = false;
-
-// Exported function to toggle ESC menu visibility
 export function toggleEscMenu(forceState) {
     const escMenu = document.getElementById('esc-menu');
     if (!escMenu) return;
 
+    // Show/hide menu with neon style
     if (typeof forceState === 'boolean') {
-        escMenuOpen = forceState;
+        escMenu.classList.toggle('show', forceState);
+        escMenu.classList.toggle('hidden', !forceState);
     } else {
-        escMenuOpen = !escMenuOpen;
-    }
-
-    if (escMenuOpen) {
-        escMenu.classList.add('visible');
-        escMenu.classList.remove('hidden');
-    } else {
-        escMenu.classList.add('hidden');
-        escMenu.classList.remove('visible');
+        const isOpen = escMenu.classList.contains('show');
+        escMenu.classList.toggle('show', !isOpen);
+        escMenu.classList.toggle('hidden', isOpen);
     }
 }
 

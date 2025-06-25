@@ -13,57 +13,70 @@ app.use(express.static(path.join(__dirname)));
 const players = {};
 
 io.on("connection", (socket) => {
-    console.log(`Player connected: ${socket.id}`);
-
-    socket.on("start", () => {
-        players[socket.id] = {
+    let playerId = null;
+    socket.on("start", (data) => {
+        playerId = data && data.id ? data.id : socket.id;
+        players[playerId] = {
             position: {
                 x: Math.random() * 50,
                 y: 4,
                 z: Math.random() * 50,
             },
-            rotationY: 0, // <-- ADDED: Initialize rotationY
+            rotationY: 0,
             health: 10,
             skinUrl: null,
-            isWalking: false, // <-- ADDED: Initialize isWalking
+            isWalking: false,
+            name: data && data.name ? data.name : playerId
         };
-
-        // Send current players data to the newly connected player
         socket.emit("currentPlayers", players);
-
-        // Broadcast new player info to existing players
         socket.broadcast.emit("newPlayer", {
-            id: socket.id,
-            position: players[socket.id].position,
-            rotationY: players[socket.id].rotationY, // <-- ADDED: Send rotationY
-            skinUrl: players[socket.id].skinUrl,
-            isWalking: players[socket.id].isWalking, // <-- ADDED: Send isWalking
+            id: playerId,
+            position: players[playerId].position,
+            rotationY: players[playerId].rotationY,
+            skinUrl: players[playerId].skinUrl,
+            isWalking: players[playerId].isWalking,
+            name: players[playerId].name
         });
     });
-
-    socket.on("move", ({ position, rotationY, isWalking }) => { // <-- MODIFIED: Receive rotationY and isWalking
-        if (!players[socket.id]) return;
-
-        // Update player's position, rotationY, and isWalking state on server
-        players[socket.id].position.x = position.x;
-        players[socket.id].position.y = position.y;
-        players[socket.id].position.z = position.z;
-        players[socket.id].rotationY = rotationY; // <-- ADDED: Update rotationY
-        players[socket.id].isWalking = isWalking; // <-- ADDED: Update isWalking
-
-        // Broadcast updated position, rotationY, and isWalking to other clients
+    socket.on("move", ({ id, position, rotationY, isWalking }) => {
+        if (!players[id]) return;
+        players[id].position.x = position.x;
+        players[id].position.y = position.y;
+        players[id].position.z = position.z;
+        players[id].rotationY = rotationY;
+        players[id].isWalking = isWalking;
         socket.broadcast.emit("playerMoved", {
-            id: socket.id,
-            position: players[socket.id].position,
-            rotationY: players[socket.id].rotationY, // <-- ADDED: Send rotationY
-            isWalking: players[socket.id].isWalking, // <-- ADDED: Send isWalking
+            id,
+            position: players[id].position,
+            rotationY: players[id].rotationY,
+            isWalking: players[id].isWalking
         });
     });
-
+    socket.on('playerState', (data) => {
+        if (!players[data.id]) return;
+        players[data.id].health = data.health;
+        players[data.id].rotationY = data.rotationY;
+        players[data.id].isWalking = data.isWalking;
+        socket.broadcast.emit('playerState', {
+            id: data.id,
+            position: data.position,
+            rotationY: data.rotationY,
+            isWalking: data.isWalking,
+            health: data.health,
+            name: data.name
+        });
+    });
+    socket.on('updateHealth', ({ targetId, health }) => {
+        if (players[targetId]) {
+            players[targetId].health = health;
+            io.emit('updateHealth', { id: targetId, health });
+        }
+    });
     socket.on("disconnect", () => {
-        console.log(`Player disconnected: ${socket.id}`);
-        delete players[socket.id];
-        io.emit("playerDisconnected", socket.id);
+        if (playerId && players[playerId]) {
+            delete players[playerId];
+            io.emit("playerDisconnected", playerId);
+        }
     });
 });
 

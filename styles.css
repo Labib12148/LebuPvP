@@ -1,53 +1,171 @@
-/* styles.css */
-
+/* --- MODERN NEON CYBERPUNK UI OVERHAUL --- */
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Press Start 2P', monospace;
-  background: black;
+  font-family: 'Orbitron', 'Press Start 2P', monospace;
+  background: #0a0a1a;
   color: #fff;
   overflow: hidden;
 }
 
+/* Remove .bg-grid and its animation */
 .bg-grid {
+  display: none !important;
+}
+
+#ui-overlay.hidden {
+  display: none !important;
+}
+#ui-overlay {
   position: absolute;
-  width: 100vw;
-  height: 100vh;
-  background: radial-gradient(circle, rgba(0,255,255,0.05) 1px, transparent 1px);
-  background-size: 60px 60px;
-  z-index: 0;
-  animation: pan 60s linear infinite;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#health-bar-container {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  width: 340px;
+  height: 32px;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.5);
+  box-shadow: 0 0 24px #0ff, 0 0 48px #0ff inset;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  border: 2.5px solid #fff;
+}
+
+#health-bar-label { display: none !important; }
+
+#health-bar-bg {
+  width: 90%;
+  height: 20px;
+  background: rgba(0,0,0,0.7);
+  border-radius: 10px;
+  margin: 0 0 0 18px;
+  overflow: hidden;
+  box-shadow: 0 0 12px #0ff inset;
+}
+
+#health-bar {
+  height: 100%;
+  width: 100%;
+  /* background: linear-gradient(90deg, #0ff, #0f0, #f0f); */
+  border-radius: 10px;
+  transition: width 0.4s cubic-bezier(.4,2,.6,1), background 0.4s cubic-bezier(.4,2,.6,1);
+  box-shadow: 0 0 16px #0ff, 0 0 32px #0ff inset;
+  position: relative;
+}
+#health-bar-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 0 0 8px #000, 0 0 16px #0ff;
+  pointer-events: none;
+  font-size: 1.1rem;
+  z-index: 2;
+}
+
+#hotbar-container {
+  position: absolute;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  width: 420px;
+  height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   pointer-events: none;
 }
 
-@keyframes pan {
-  0% { background-position: 0 0; }
-  100% { background-position: 3000px 3000px; }
+#hotbar-label { display: none !important; }
+
+#hotbar {
+  width: 100%;
+  height: 36px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
 }
 
+.hotbar-slot {
+  width: 90px;
+  height: 36px;
+  background: rgba(0,0,0,0.7);
+  border: 2.5px solid #fff;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px;
+  cursor: pointer;
+  transition: border 0.2s, background 0.2s, color 0.2s;
+  pointer-events: auto;
+  box-shadow: 0 0 12px #0ff inset;
+}
+
+.hotbar-slot.selected {
+  border: 2.5px solid #0ff;
+  background: rgba(0,255,255,0.2);
+  color: #0ff;
+  box-shadow: 0 0 24px #0ff, 0 0 48px #0ff inset;
+}
 .landing {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  z-index: 100;
+  top: 0; left: 0; width: 100vw; height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  background: rgba(10,10,26,0.98);
   text-align: center;
   backdrop-filter: blur(8px);
+}
+.landing.hidden {
+  display: none !important;
 }
 
 .game-title {
   font-size: 4rem;
   font-weight: 700;
   color: #0ff;
-  text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+  text-shadow: 0 0 20px #0ff, 0 0 40px #0ff, 0 0 80px #0ff;
   margin-bottom: 50px;
+  letter-spacing: 2px;
 }
-
 .game-title span {
   color: #f0f;
-  text-shadow: 0 0 10px #f0f, 0 0 20px #f0f;
+  text-shadow: 0 0 20px #f0f, 0 0 40px #f0f, 0 0 80px #f0f;
+}
+
+.player-name-entry label {
+  font-size: 1.2rem;
+  color: #fff;
+  margin-right: 8px;
+}
+.player-name-entry input {
+  font-size: 1.1rem;
+  border-radius: 8px;
+  border: 2px solid #0ff;
+  background: #181830;
+  color: #0ff;
+  padding: 6px 12px;
+  outline: none;
+  box-shadow: 0 0 12px #0ff inset;
+  margin-bottom: 16px;
 }
 
 .glow-button {
@@ -58,222 +176,64 @@ body {
   color: #0ff;
   border-radius: 50px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(.4,2,.6,1);
   text-shadow: 0 0 10px #0ff;
   box-shadow: 0 0 20px #0ff, 0 0 40px #0ff inset;
 }
-
 .glow-button:hover {
   background: #0ff;
   color: #000;
-  box-shadow: 0 0 30px #0ff, 0 0 60px #0ff inset;
+  box-shadow: 0 0 40px #0ff, 0 0 80px #0ff inset;
 }
 
-.hidden {
-  display: none !important;
-}
-
-#game-container {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-
-#escMenuOverlay button:focus {
-  outline: none;
-  box-shadow: 0 0 5px #fff;
-}
-
-
-/* Message Box Styling */
-.message-box {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.85);
-  z-index: 999;
-}
-
-.message-content {
-  background: #111;
-  border: 2px solid #0ff;
-  padding: 2rem 3rem;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 0 20px #0ff;
-}
-
-.message-content p {
-  margin-bottom: 1rem;
+.subtitle {
+  color: #fff;
   font-size: 1.2rem;
-}
-
-.message-content button {
-  background: #0ff;
-  color: #000;
-  font-weight: bold;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 10px;
-  cursor: pointer;
-  box-shadow: 0 0 10px #0ff, 0 0 20px #0ff inset;
-  transition: all 0.3s ease;
-}
-
-.message-content button:hover {
-  background: #00e5e5;
-}
-
-/* ESC Menu Styling */
-.esc-menu {
-  position: fixed;
-  top: 20%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.9);
-  border: 2px solid #0ff;
-  padding: 30px 40px;
-  border-radius: 12px;
-  color: #0ff;
-  font-family: 'Press Start 2P', cursive;
-  text-align: center;
-  z-index: 10000;
-  box-shadow: 0 0 30px #0ff, inset 0 0 40px #0ff;
-  width: 280px;
-  user-select: none;
-
-  /* For smooth fade */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.esc-menu.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.esc-menu h2 {
-  margin-bottom: 20px;
-  font-weight: 700;
-  font-size: 1.2rem;
-  text-shadow: 0 0 15px #0ff;
-}
-
-.esc-menu label {
-  display: block;
-  margin: 15px 0 6px;
-  font-size: 0.75rem;
-  color: #0ff;
+  margin-bottom: 24px;
   text-shadow: 0 0 8px #0ff;
 }
 
-.esc-menu input[type="range"] {
-  width: 100%;
-  cursor: pointer;
-  -webkit-appearance: none;
-  background: #111;
+#esc-menu {
+  position: absolute;
+  z-index: 200;
+  top: 10vh;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 340px;
+  background: rgba(10,10,26,0.98);
+  border-radius: 18px;
+  box-shadow: 0 0 32px #0ff, 0 0 64px #0ff inset;
+  border: 2.5px solid #0ff;
+  padding: 32px 40px 32px 40px;
+  color: #fff;
+  display: none;
+}
+#esc-menu h2 {
+  color: #0ff;
+  font-size: 2rem;
+  margin-bottom: 18px;
+  text-shadow: 0 0 16px #0ff;
+}
+#esc-menu button, #esc-menu input[type=range] {
+  font-size: 1.1rem;
   border-radius: 8px;
-  height: 6px;
-  box-shadow: 0 0 10px #0ff inset;
+  border: 2px solid #0ff;
+  background: #181830;
+  color: #0ff;
+  padding: 8px 16px;
+  margin: 8px 0;
+  box-shadow: 0 0 12px #0ff inset;
+  outline: none;
 }
-
-.esc-menu input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #0ff;
-  cursor: pointer;
-  border-radius: 50%;
-  box-shadow: 0 0 15px #0ff;
-  transition: background-color 0.3s ease;
-}
-
-.esc-menu input[type="range"]::-webkit-slider-thumb:hover {
-  background-color: #0cc;
-}
-
-.esc-menu input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: #0ff;
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 15px #0ff;
-}
-
-.glow-button.small-button {
-  font-size: 0.85rem;
-  padding: 8px 18px;
-  margin: 10px 0;
-  border-radius: 30px;
-  width: 100%;
-  box-sizing: border-box;
-  text-shadow: 0 0 10px #0ff;
-  box-shadow: 0 0 20px #0ff, 0 0 40px #0ff inset;
-  transition: all 0.3s ease;
-}
-
-.glow-button.small-button:hover {
+#esc-menu button:hover {
   background: #0ff;
   color: #000;
-  box-shadow: 0 0 30px #0ff, 0 0 60px #0ff inset;
 }
-
-/* Override hidden to allow fade effect */
-.hidden {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transition: opacity 0.3s ease !important;
-  display: none !important;
+#esc-menu label {
+  color: #fff;
+  margin-right: 8px;
 }
-
-/* Smooth futuristic animated title */
-.animated-title {
-  position: relative;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 4rem;
-  font-weight: 700;
-  color: #0ff;
-  text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
-  animation: glowPulse 3s infinite ease-in-out;
-  background: linear-gradient(90deg, #0ff, #f0f, #0ff);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+#esc-menu.show {
+  display: block !important;
 }
-
-.animated-title span {
-  color: #f0f;
-  text-shadow: 0 0 12px #f0f, 0 0 24px #f0f;
-}
-
-@keyframes glowPulse {
-  0%, 100% {
-    text-shadow: 0 0 8px #0ff, 0 0 18px #0ff;
-    background-position: 0% center;
-  }
-  50% {
-    text-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
-    background-position: 100% center;
-  }
-}
-
-/* Subtitle stays same */
-.subtitle {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 1.1rem;
-  color: #aaa;
-  text-shadow: 0 0 6px #0ff;
-  margin-top: -30px;
-  margin-bottom: 60px;
-  animation: fadeInSubtitle 2.5s ease-out;
-}
-
-@keyframes fadeInSubtitle {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* --- END MODERN NEON CYBERPUNK UI --- */

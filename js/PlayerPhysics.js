@@ -2,6 +2,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js";
 import { CameraController } from './camera.js';
 import { PlayerModel } from './player.js';
+import { WeaponManager, Sword, Gun } from './weapons.js';
+import { HealthSystem } from './health.js';
+import { getPlayerName, setPlayerNameAbove } from './playerName.js';
 
 const PLAYER_HEIGHT = 1.8;
 const PLAYER_WIDTH = 0.6;
@@ -12,33 +15,39 @@ const GRAVITY = -0.01;
 const FLOOR_Y = 0; // Adjusted to 0 since player model now handles its height relative to 0
 
 export class PlayerPhysics {
-    constructor(scene, rendererDomElement, collidableObjects, showMessageBox, socket) {
+    constructor(scene, rendererDomElement, collidableObjects, showMessageBox, socket, playerName, id) {
         this.scene = scene;
         this.collidableObjects = collidableObjects;
-        this.showMessageBox = showMessageBox;
         this.socket = socket;
-
-        this.playerModel = new PlayerModel(this.scene); // Initialize PlayerModel
-
+        this.id = id || playerName;
+        this.playerModel = new PlayerModel(this.scene);
         this.cameraController = new CameraController(rendererDomElement, this.playerModel);
         this.camera = this.cameraController.getCamera();
-
         this.position = new THREE.Vector3(0, 0, 0);
         this.velocity = new THREE.Vector3();
-        this.rotation = new THREE.Vector2(); // Stores camera rotation (yaw and pitch)
+        this.rotation = new THREE.Vector2();
         this.onGround = false;
-
         this.keyState = {};
-
+        this.weaponManager = new WeaponManager(this);
+        this.weaponManager.addWeapon(new Sword());
+        this.weaponManager.addWeapon(new Gun());
+        this.playerModel.setWeaponModel('Sword');
+        this.healthSystem = new HealthSystem(100);
+        this.playerName = playerName || getPlayerName();
+        setPlayerNameAbove(this.playerModel, this.playerName);
         this.addEventListeners();
-
-        // Initial position, adjusted based on the PlayerModel's internal offset for feet at Y=0
         this.position.set(0, PLAYER_HEIGHT / 2, 0);
     }
 
     addEventListeners() {
         document.addEventListener('keydown', (event) => {
             this.keyState[event.code] = true;
+            // Chat open (T)
+            if (event.code === 'KeyT' && document.activeElement.id !== 'chat-input') {
+                const chatBox = document.getElementById('chat-box');
+                if (chatBox) chatBox.focus();
+                event.preventDefault();
+            }
         });
         document.addEventListener('keyup', (event) => {
             this.keyState[event.code] = false;
@@ -204,22 +213,32 @@ export class PlayerPhysics {
         // Update player model position and walking animation state (for your own player)
         this.playerModel.update(this.position, isWalking);
 
+        // Update weapons and health
+        this.weaponManager.getCurrentWeapon().update?.(deltaTime);
+
         // Emit player movement data for multiplayer (if socket is available)
         if (this.socket) {
-            // Remove redundant 'playerMovement' emit if 'move' sends enough data
-            // this.socket.emit('playerMovement', { position: this.position, rotation: this.rotation }); 
-
             this.socket.emit("move", {
+                id: this.id,
                 position: {
                     x: this.position.x,
                     y: this.position.y,
                     z: this.position.z
                 },
-                // Send the player's current rotation around the Y-axis (for facing direction)
-                rotationY: this.playerModel.playerGroup.rotation.y, // <-- ADDED: Send player's Y rotation
-                isWalking: isWalking // <-- ADDED: Send animation state
+                rotationY: this.playerModel.playerGroup.rotation.y,
+                isWalking: isWalking
             });
         }
+
+        // Update weapon model in hand
+        const weapon = this.weaponManager.getCurrentWeapon();
+        if (weapon && weapon.name) {
+            this.playerModel.setWeaponModel(weapon.name);
+        }
+    }
+
+    takeDamage(amount) {
+        this.healthSystem.takeDamage(amount);
     }
 
     getCamera() {
